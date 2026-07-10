@@ -1,0 +1,35 @@
+{
+  "summary": "First-finish smoke test of Trading Journal MVP. Backend and frontend both verified end-to-end using the public REACT_APP_BACKEND_URL. All critical flows work: JWT auth (login/register/logout/me), trades CRUD with correct P&L calc (Long: (exit-entry)*qty-fees), analytics summary+calendar, journal upsert, Claude Sonnet 4.5 AI insights, user isolation, and full UI navigation for demo@tape.io.",
+  "tested_scope": ["frontend", "backend", "auth", "integration"],
+  "passed": [
+    "POST /api/auth/login demo@tape.io -> 200 + token",
+    "GET /api/auth/me with bearer -> 200",
+    "POST /api/auth/register new user -> 200 + token (user isolation verified: empty trades/journal)",
+    "POST /api/auth/logout cookie -> 200 + subsequent /api/auth/me returns 401",
+    "POST /api/trades AAPL Long qty=10 entry=220 exit=225 fees=1 -> pnl=49 (correct)",
+    "PUT /api/trades/{id} exit_price=230 -> pnl recalculated to 99",
+    "GET /api/trades?market_type=Stocks filter works",
+    "DELETE /api/trades/{id} -> 200; subsequent GET -> 404",
+    "GET /api/analytics/summary -> total_pnl, win_rate, avg_win, best/worst_trade, profit_factor, by_market, by_strategy, equity_curve all populated",
+    "GET /api/analytics/calendar?year=2026&month=1 -> only Jan entries",
+    "POST /api/journal twice for same date -> upsert (single row, updated content)",
+    "GET /api/journal/{date} and GET /api/journal list work",
+    "POST /api/ai/insights (Claude Sonnet 4.5 via emergentintegrations) returns markdown with '##' section headers; GET /api/ai/insights returns latest saved",
+    "Frontend: Login page (auth-form), login flow, current-user-email='demo@tape.io'",
+    "Frontend Dashboard: stats tiles, equity curve, PnL by market bar chart, recent trades, strategy leaderboard all render",
+    "Frontend Trades: add-trade dialog with live P&L preview (+49) works; new row created; search-trades filter narrows to 1 row for TSLA; delete-{id} + confirm-delete removes row",
+    "Frontend Calendar: nav-calendar loads with cal-prev/cal-next",
+    "Frontend Journal: journal-content save appears in journal-hist-{date} list",
+    "Frontend AI Insights: generate-insights loads existing insight rendered with amber section headers (Executive Summary, Strengths, Weaknesses & Leaks)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "notes": [
+    "Bearer JWT remains valid after logout (only httpOnly cookie is cleared) - expected JWT behavior; cookie-based auth is properly invalidated on logout.",
+    "Minor console warning from recharts: 'width(-1) and height(-1) of chart should be greater than 0' during initial render - non-blocking, charts render correctly.",
+    "Two 401 console errors on unauthenticated /api/auth/me probe before login - expected."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
