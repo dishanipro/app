@@ -1,0 +1,127 @@
+{
+  "project_name": "Bloomberg-Style Trading Journal",
+  "theme_strategy": {
+    "mode": "dark",
+    "rationale": "True dark mode mimics professional financial terminals, reduces eye strain for traders monitoring screens for hours, and allows semantic colors (red/green) and accents (amber/cyan) to pop.",
+    "implementation": "Force dark mode in tailwind classes. Avoid pure white text on pure black; use off-white for primary text."
+  },
+  "typography": {
+    "headings": {
+      "family": "IBM Plex Sans, sans-serif",
+      "weight": "font-bold to font-black",
+      "tracking": "tracking-tight",
+      "usage": "Dashboard titles, panel headers, main section titles."
+    },
+    "body": {
+      "family": "Inter, sans-serif",
+      "weight": "font-normal",
+      "usage": "General descriptive text, form labels, journal notes."
+    },
+    "data_and_numbers": {
+      "family": "JetBrains Mono, Roboto Mono, monospace",
+      "weight": "font-medium",
+      "tracking": "tracking-tighter",
+      "usage": "CRITICAL: Must be used for ALL numerical data, tables, P&L, timestamps, ticker symbols, and metrics. This enforces the terminal aesthetic."
+    },
+    "hierarchy": {
+      "h1": "text-2xl md:text-3xl font-black uppercase tracking-tight",
+      "h2": "text-lg md:text-xl font-bold uppercase tracking-tight",
+      "h3": "text-base font-semibold uppercase tracking-wider text-muted-foreground",
+      "metrics": "text-2xl md:text-4xl font-mono font-bold tracking-tighter"
+    }
+  },
+  "colors": {
+    "backgrounds": {
+      "base": "#0A0A0A",
+      "panel": "#111111",
+      "panel_hover": "#1A1A1A",
+      "input": "#000000"
+    },
+    "text": {
+      "primary": "#F4F4F5",
+      "secondary": "#A1A1AA",
+      "tertiary": "#52525B"
+    },
+    "accents": {
+      "bloomberg_orange": "#F97316",
+      "amber": "#F59E0B",
+      "cyan": "#06B6D4",
+      "usage": "Use cyan for interactive element highlights (active tabs, borders). Use orange/amber for AI insights or critical warnings."
+    },
+    "semantic": {
+      "profit": "#10B981",
+      "loss": "#EF4444",
+      "neutral": "#6B7280"
+    },
+    "borders": {
+      "default": "#27272A",
+      "focus": "#06B6D4"
+    }
+  },
+  "surface_strategies": {
+    "style": "The Technical Grid / Brutalist",
+    "rules": [
+      "No glassmorphism. Flat solid colors only.",
+      "No soft shadows. Use sharp 1px borders to separate panels.",
+      "Sharp edges. Override Tailwind radius to `rounded-none` or `max 2px`.",
+      "Containers should feel like resizable, tightly packed terminal windows."
+    ]
+  },
+  "layouts": {
+    "dashboard_grid": {
+      "type": "High Density Grid (Mode B)",
+      "structure": "grid-cols-1 md:grid-cols-4 xl:grid-cols-6 gap-px bg-border (to create 1px borders between all items)",
+      "spacing": "Tight padding (p-4 or p-3). Maximum data density.",
+      "panels": [
+        "Top-left: Core Portfolio Metrics (P&L, Win Rate).",
+        "Middle: Scalable Chart Area (Equity Curve/AI Analysis).",
+        "Bottom/Right: Dense tabular trade list & recent activity."
+      ]
+    },
+    "navigation": {
+      "style": "Left sidebar or minimal top nav. Highly compact, icon + text.",
+      "active_state": "Left border highlight (Cyan) or background tint."
+    }
+  },
+  "components_instructions": {
+    "tables": "Must use monospaced font for all columns containing numbers. Right-align numerical columns. Extremely dense (py-1 or py-2 max). Include hover row states (`hover:bg-zinc-900`).",
+    "cards": "Remove shadows (`shadow-none`). Force 1px solid border (`border border-zinc-800`). Background `bg-[#111]`. No rounded corners.",
+    "buttons": "Sharp edges. Primary: Cyan text on very dark cyan bg (`bg-cyan-950 text-cyan-400 border border-cyan-800`). Semantic: Green/Red for Buy/Sell.",
+    "inputs_and_forms": "Solid black backgrounds (`bg-black`), sharp borders, monospaced placeholder text for tickers/prices.",
+    "tabs": "Flat tab style. Active tab gets a bright Cyan top or bottom border. No pill shapes.",
+    "charts": "Use Recharts. Strip out grid lines or make them extremely faint (`stroke-opacity 0.1`). Use Cyan for equity curves, Green/Red for volume/PnL bars.",
+    "toasts": "Use Sonner. Dark mode forced. Sharp edges, positioned bottom-right."
+  },
+  "motion_and_interactions": {
+    "philosophy": "Immediate and functional. No bouncy or slow animations.",
+    "hover_states": "Instant color swaps or sharp 1px border highlight.",
+    "transitions": "Very fast (`duration-75` or `duration-100`). Limit to opacity and background color changes."
+  },
+  "media_and_icons": {
+    "icons": "Use Phosphor Icons (`@phosphor-icons/react`) for a denser, more technical look. If unavailable, use `lucide-react` with 1.5px stroke width max.",
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/36057195/pexels-photo-36057195.jpeg",
+        "description": "Dark abstract geometric grid. Can be used at 5% opacity for empty states or login background to enforce the 'data grid' feel.",
+        "category": "backgrounds"
+      }
+    ]
+  },
+  "general_ui_ux_guidelines": [
+    "One core question per view. Prioritize P&L and Win Rate at the top left.",
+    "Use progressive disclosure. Show summary metrics, allow clicking into a trade for full details.",
+    "Ensure contrast passes APCA standards, especially for Cyan and Amber against black.",
+    "Never use transparent backgrounds on dropdowns or overlays. Always use solid #111111.",
+    "DO NOT center align text globally. Keep text left-aligned, numbers right-aligned.",
+    "Use `data-testid` on ALL interactive elements (buttons, inputs, tabs, table rows)."
+  ],
+  "instructions_to_main_agent": [
+    "Install required fonts from Google Fonts: IBM Plex Sans and JetBrains Mono.",
+    "Update `tailwind.config.js` to override `--radius: 0rem` to enforce sharp edges.",
+    "Remove `.App { text-align: center; }` from `App.css`.",
+    "Use `recharts` for the Analytics dashboard and Equity Curve.",
+    "Build the Trade Entry Form using Shadcn primitives but restyle to eliminate rounding and shadows.",
+    "For the AI Insights Panel, use the Amber/Orange accent colors to differentiate it from standard data.",
+    "Ensure the application strictly follows the dark Bloomberg terminal aesthetic with a true black (`#0A0A0A`) background."
+  ]
+}
