@@ -9,6 +9,7 @@ import {
   Sparkles,
   Bot,
   Calculator as CalculatorIcon,
+  Flag,
   LogOut,
   TerminalSquare,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const nav = [
   { to: "/calendar", label: "Calendar", icon: CalendarDays, id: "nav-calendar" },
   { to: "/journal", label: "Journal", icon: Notebook, id: "nav-journal" },
   { to: "/calculator", label: "Risk Calc", icon: CalculatorIcon, id: "nav-calculator" },
+  { to: "/audit", label: "Weekly Audit", icon: Flag, id: "nav-audit" },
   { to: "/insights", label: "AI Insights", icon: Sparkles, id: "nav-insights" },
   { to: "/mentor", label: "AI Mentor", icon: Bot, id: "nav-mentor" },
 ];
