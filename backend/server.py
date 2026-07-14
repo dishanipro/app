@@ -571,6 +571,413 @@ async def mentor_message(inp: MentorMessageInput, user: dict = Depends(get_curre
     return {"user_message": user_doc, "assistant_message": assistant_doc}
 
 
+# =============================================
+# Trading Challenges
+# =============================================
+CHALLENGE_PRESETS = {
+    "10day-growth": {
+        "title": "10-Day Capital Growth Challenge",
+        "days": 10,
+        "target_capital": 5000.0,
+        "rule": "Reach ₹5,000 net profit within 10 trading days.",
+        "kind": "growth",
+    },
+    "20day-discipline": {
+        "title": "20-Day Strict Discipline Challenge",
+        "days": 20,
+        "rule_max_trades_per_day": 1,
+        "rule": "Take a maximum of 1 trade per day for 20 days.",
+        "kind": "discipline",
+    },
+    "30day-risk": {
+        "title": "30-Day Risk Management Masterclass",
+        "days": 30,
+        "rule_max_risk_pct": 1.0,
+        "rule": "No single trade loss may exceed 1% of your stated capital.",
+        "kind": "risk",
+    },
+}
+
+
+class ChallengeStart(BaseModel):
+    type: str  # "10day-growth" | "20day-discipline" | "30day-risk" | "custom"
+    stated_capital: Optional[float] = 0
+    # custom-only
+    custom_days: Optional[int] = None
+    custom_target: Optional[float] = None
+    custom_title: Optional[str] = ""
+
+
+def _today_date():
+    return datetime.now(timezone.utc).date()
+
+
+def _iso_date(d):
+    return d.isoformat()
+
+
+def _eval_challenge(challenge: dict, trades: List[dict]) -> dict:
+    """Compute live progress / pass-fail for a challenge based on trades in its window."""
+    from datetime import date, timedelta
+    start = date.fromisoformat(challenge["start_date"])
+    end = date.fromisoformat(challenge["end_date"])
+    today = _today_date()
+    days_total = challenge["days"]
+    days_elapsed = max(0, min(days_total, (today - start).days + 1))
+    days_remaining = max(0, (end - today).days)
+
+    # Filter trades in [start, end] window based on exit_time
+    window = []
+    for t in trades:
+        d = (t.get("exit_time") or "")[:10]
+        if not d:
+            continue
+        try:
+            td = date.fromisoformat(d)
+        except Exception:
+            continue
+        if start <= td <= end:
+            window.append({**t, "_d": td})
+
+    kind = challenge["kind"]
+    total_pnl = round(sum(t["pnl"] for t in window), 2)
+    trades_count = len(window)
+
+    status = challenge.get("status", "active")
+    progress = 0.0
+    detail = ""
+    violations = []
+
+    if kind == "growth":
+        target = challenge.get("target_capital") or 0
+        progress = min(100.0, (total_pnl / target * 100)) if target > 0 else 0
+        if progress < 0:
+            progress = 0
+        detail = f"₹{total_pnl:,.2f} of ₹{target:,.2f} target · {trades_count} trades taken"
+        if total_pnl >= target and target > 0:
+            status = "passed"
+        elif today > end:
+            status = "failed" if total_pnl < target else "passed"
+    elif kind == "discipline":
+        max_pd = challenge.get("rule_max_trades_per_day") or 1
+        counts = {}
+        for t in window:
+            counts[t["_d"]] = counts.get(t["_d"], 0) + 1
+        bad_days = [(d.isoformat(), c) for d, c in counts.items() if c > max_pd]
+        violations = [f"{d}: {c} trades" for d, c in bad_days]
+        progress = min(100.0, days_elapsed / days_total * 100) if not bad_days else 0
+        detail = (
+            f"Day {days_elapsed}/{days_total} · {trades_count} trades logged · "
+            + ("no violations" if not bad_days else f"{len(bad_days)} violation day(s)")
+        )
+        if bad_days:
+            status = "failed"
+        elif today > end:
+            status = "passed"
+    elif kind == "risk":
+        cap = challenge.get("stated_capital") or 0
+        max_risk_pct = challenge.get("rule_max_risk_pct") or 1.0
+        threshold = cap * (max_risk_pct / 100) if cap > 0 else 0
+        offenders = []
+        for t in window:
+            if t["pnl"] < 0 and threshold > 0 and abs(t["pnl"]) > threshold:
+                offenders.append(f"{t['symbol']} lost ₹{abs(t['pnl']):,.2f} (> ₹{threshold:,.2f})")
+        violations = offenders
+        progress = min(100.0, days_elapsed / days_total * 100) if not offenders else 0
+        detail = (
+            f"Day {days_elapsed}/{days_total} · risk cap ₹{threshold:,.2f} per trade · "
+            + ("no breaches" if not offenders else f"{len(offenders)} breach(es)")
+        )
+        if offenders:
+            status = "failed"
+        elif today > end:
+            status = "passed"
+    elif kind == "custom":
+        target = challenge.get("target_capital") or 0
+        progress = min(100.0, (total_pnl / target * 100)) if target > 0 else 0
+        if progress < 0:
+            progress = 0
+        detail = f"₹{total_pnl:,.2f} of ₹{target:,.2f} target · {trades_count} trades taken"
+        if target > 0 and total_pnl >= target:
+            status = "passed"
+        elif today > end:
+            status = "failed" if total_pnl < target else "passed"
+
+    return {
+        **{k: v for k, v in challenge.items() if k != "_id"},
+        "status": status,
+        "progress": round(progress, 1),
+        "days_elapsed": days_elapsed,
+        "days_remaining": days_remaining,
+        "days_total": days_total,
+        "trades_count": trades_count,
+        "total_pnl": total_pnl,
+        "detail": detail,
+        "violations": violations,
+    }
+
+
+@api.post("/challenges/start")
+async def start_challenge(inp: ChallengeStart, user: dict = Depends(get_current_user)):
+    from datetime import date, timedelta
+    ctype = inp.type
+    today = _today_date()
+
+    if ctype in CHALLENGE_PRESETS:
+        preset = CHALLENGE_PRESETS[ctype]
+        days = preset["days"]
+        doc = {
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "type": ctype,
+            "kind": preset["kind"],
+            "title": preset["title"],
+            "rule": preset["rule"],
+            "days": days,
+            "target_capital": preset.get("target_capital"),
+            "rule_max_trades_per_day": preset.get("rule_max_trades_per_day"),
+            "rule_max_risk_pct": preset.get("rule_max_risk_pct"),
+            "stated_capital": inp.stated_capital or 0,
+            "start_date": _iso_date(today),
+            "end_date": _iso_date(today + timedelta(days=days - 1)),
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    elif ctype == "custom":
+        if not inp.custom_days or inp.custom_days < 1:
+            raise HTTPException(status_code=400, detail="custom_days must be at least 1.")
+        if not inp.custom_target or inp.custom_target <= 0:
+            raise HTTPException(status_code=400, detail="custom_target must be greater than 0.")
+        days = int(inp.custom_days)
+        doc = {
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "type": "custom",
+            "kind": "custom",
+            "title": inp.custom_title.strip() if inp.custom_title else f"Custom · {days}-Day Growth Challenge",
+            "rule": f"Reach ₹{inp.custom_target:,.0f} net profit within {days} trading days.",
+            "days": days,
+            "target_capital": float(inp.custom_target),
+            "stated_capital": inp.stated_capital or 0,
+            "start_date": _iso_date(today),
+            "end_date": _iso_date(today + timedelta(days=days - 1)),
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Unknown challenge type.")
+
+    await db.challenges.insert_one(doc)
+    doc.pop("_id", None)
+    # Return with evaluation
+    trades = await db.trades.find({"user_id": user["id"]}, {"_id": 0}).to_list(length=5000)
+    return _eval_challenge(doc, trades)
+
+
+@api.get("/challenges")
+async def list_challenges(user: dict = Depends(get_current_user)):
+    docs = await db.challenges.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(length=100)
+    trades = await db.trades.find({"user_id": user["id"]}, {"_id": 0}).to_list(length=5000)
+    return [_eval_challenge(c, trades) for c in docs]
+
+
+@api.get("/challenges/active")
+async def active_challenge(user: dict = Depends(get_current_user)):
+    doc = await db.challenges.find_one({"user_id": user["id"], "status": "active"}, {"_id": 0}, sort=[("created_at", -1)])
+    if not doc:
+        return None
+    trades = await db.trades.find({"user_id": user["id"]}, {"_id": 0}).to_list(length=5000)
+    evaluated = _eval_challenge(doc, trades)
+    # Persist status transitions
+    if evaluated["status"] != doc.get("status"):
+        await db.challenges.update_one({"id": doc["id"]}, {"$set": {"status": evaluated["status"]}})
+    return evaluated
+
+
+@api.delete("/challenges/{challenge_id}")
+async def cancel_challenge(challenge_id: str, user: dict = Depends(get_current_user)):
+    res = await db.challenges.delete_one({"id": challenge_id, "user_id": user["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    return {"ok": True}
+
+
+# =============================================
+# Subscriptions (Payment placeholder)
+# =============================================
+PLAN_CATALOG = {
+    "monthly": {"code": "monthly", "name": "Monthly Pro Pack", "amount": 99.0, "days": 30, "currency": "INR"},
+    "yearly": {"code": "yearly", "name": "Yearly Elite Pack", "amount": 999.0, "days": 365, "currency": "INR"},
+}
+AFFILIATE_COMMISSION_PCT = 20.0
+
+
+class CheckoutInput(BaseModel):
+    plan: str  # "monthly" | "yearly"
+    ref_code: Optional[str] = ""
+
+
+class CompletePurchaseInput(BaseModel):
+    subscription_id: str
+
+
+async def _ensure_affiliate_code(user_id: str) -> str:
+    import secrets
+    u = await db.users.find_one({"id": user_id})
+    if u and u.get("affiliate_code"):
+        return u["affiliate_code"]
+    for _ in range(6):
+        code = secrets.token_urlsafe(5).replace("_", "").replace("-", "")[:8].upper()
+        try:
+            await db.users.update_one({"id": user_id}, {"$set": {"affiliate_code": code}})
+            return code
+        except Exception:
+            continue
+    # fallback deterministic
+    code = user_id[:8].upper()
+    await db.users.update_one({"id": user_id}, {"$set": {"affiliate_code": code}})
+    return code
+
+
+@api.get("/subscriptions/plans")
+async def list_plans():
+    return list(PLAN_CATALOG.values())
+
+
+@api.get("/subscriptions/me")
+async def my_subscription(user: dict = Depends(get_current_user)):
+    sub = await db.subscriptions.find_one(
+        {"user_id": user["id"], "status": "active"},
+        {"_id": 0},
+        sort=[("created_at", -1)],
+    )
+    return sub
+
+
+@api.post("/subscriptions/checkout")
+async def create_checkout(inp: CheckoutInput, user: dict = Depends(get_current_user)):
+    plan = PLAN_CATALOG.get(inp.plan)
+    if not plan:
+        raise HTTPException(status_code=400, detail="Unknown plan.")
+    ref = (inp.ref_code or "").strip().upper() or None
+    # ensure ref code exists in another user
+    referrer_id = None
+    if ref:
+        referrer = await db.users.find_one({"affiliate_code": ref})
+        if referrer and referrer["id"] != user["id"]:
+            referrer_id = referrer["id"]
+    sub_id = str(uuid.uuid4())
+    doc = {
+        "id": sub_id,
+        "user_id": user["id"],
+        "plan": plan["code"],
+        "plan_name": plan["name"],
+        "amount": plan["amount"],
+        "currency": plan["currency"],
+        "status": "pending",
+        "ref_code": ref,
+        "referrer_id": referrer_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "gateway": "placeholder",
+    }
+    await db.subscriptions.insert_one(doc)
+    doc.pop("_id", None)
+    return {
+        **doc,
+        "checkout_url": None,  # real gateway URL when integrated
+        "message": "Payment gateway integration pending — complete the demo purchase to activate.",
+    }
+
+
+@api.post("/subscriptions/complete")
+async def complete_subscription(inp: CompletePurchaseInput, user: dict = Depends(get_current_user)):
+    """PLACEHOLDER endpoint that simulates a successful payment confirmation.
+    Once real Razorpay/Stripe is wired, this becomes the webhook handler."""
+    from datetime import date, timedelta
+    sub = await db.subscriptions.find_one({"id": inp.subscription_id, "user_id": user["id"]})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    if sub.get("status") == "active":
+        return {"ok": True, "already_active": True}
+
+    plan = PLAN_CATALOG.get(sub["plan"])
+    today = _today_date()
+    expires = today + timedelta(days=plan["days"])
+    await db.subscriptions.update_one(
+        {"id": sub["id"]},
+        {"$set": {
+            "status": "active",
+            "activated_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": _iso_date(expires),
+        }}
+    )
+
+    # Credit affiliate if applicable
+    if sub.get("referrer_id"):
+        commission = round(sub["amount"] * AFFILIATE_COMMISSION_PCT / 100, 2)
+        earning = {
+            "id": str(uuid.uuid4()),
+            "affiliate_user_id": sub["referrer_id"],
+            "referred_user_id": user["id"],
+            "subscription_id": sub["id"],
+            "plan": sub["plan"],
+            "amount": commission,
+            "currency": sub["currency"],
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.affiliate_earnings.insert_one(earning)
+
+    return {"ok": True, "expires_at": _iso_date(expires)}
+
+
+# =============================================
+# Affiliate Program
+# =============================================
+class AffiliateClickInput(BaseModel):
+    code: str
+
+
+@api.post("/affiliate/click")
+async def log_affiliate_click(inp: AffiliateClickInput, request: Request):
+    code = (inp.code or "").strip().upper()
+    if not code:
+        raise HTTPException(status_code=400, detail="code required")
+    referrer = await db.users.find_one({"affiliate_code": code})
+    if not referrer:
+        return {"ok": False, "reason": "invalid_code"}
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    await db.affiliate_clicks.insert_one({
+        "id": str(uuid.uuid4()),
+        "code": code,
+        "affiliate_user_id": referrer["id"],
+        "ip": ip[:64],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"ok": True}
+
+
+@api.get("/affiliate/me")
+async def my_affiliate(user: dict = Depends(get_current_user), request: Request = None):
+    code = await _ensure_affiliate_code(user["id"])
+    clicks = await db.affiliate_clicks.count_documents({"code": code})
+    earnings = await db.affiliate_earnings.find({"affiliate_user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(length=200)
+    pending = sum(e["amount"] for e in earnings if e["status"] == "pending")
+    paid = sum(e["amount"] for e in earnings if e["status"] == "paid")
+    total = pending + paid
+    referrals = len({e["referred_user_id"] for e in earnings})
+    return {
+        "code": code,
+        "commission_pct": AFFILIATE_COMMISSION_PCT,
+        "clicks": clicks,
+        "total_referrals": referrals,
+        "pending_payouts": round(pending, 2),
+        "paid_out": round(paid, 2),
+        "total_earnings": round(total, 2),
+        "earnings": earnings,
+    }
+
+
 
 # -----------------------------
 # App startup
@@ -579,8 +986,13 @@ async def mentor_message(inp: MentorMessageInput, user: dict = Depends(get_curre
 async def startup():
     await db.users.create_index("email", unique=True)
     await db.users.create_index("id", unique=True)
+    await db.users.create_index("affiliate_code", unique=True, sparse=True)
     await db.trades.create_index([("user_id", 1), ("exit_time", -1)])
     await db.journal.create_index([("user_id", 1), ("date", 1)], unique=True)
+    await db.challenges.create_index([("user_id", 1), ("status", 1)])
+    await db.subscriptions.create_index([("user_id", 1), ("status", 1)])
+    await db.affiliate_earnings.create_index([("affiliate_user_id", 1)])
+    await db.affiliate_clicks.create_index("code")
     logger.info("Trading journal ready.")
 
 @app.on_event("shutdown")

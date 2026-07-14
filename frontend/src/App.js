@@ -1,8 +1,9 @@
 import React from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Toaster } from "sonner";
+import { api } from "@/lib/api";
 
 import Login from "@/pages/Login";
 import AppShell from "@/components/AppShell";
@@ -14,6 +15,9 @@ import Insights from "@/pages/Insights";
 import Mentor from "@/pages/Mentor";
 import CalculatorPage from "@/pages/Calculator";
 import WeeklyAudit from "@/pages/WeeklyAudit";
+import Challenges from "@/pages/Challenges";
+import Pricing from "@/pages/Pricing";
+import Affiliate from "@/pages/Affiliate";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -35,11 +39,25 @@ function GuestOnly({ children }) {
   return children;
 }
 
+function ReferralCapture() {
+  const [params] = useSearchParams();
+  React.useEffect(() => {
+    const ref = params.get("ref");
+    if (ref) {
+      const code = ref.trim().toUpperCase();
+      localStorage.setItem("tj_ref", code);
+      api.post("/affiliate/click", { code }).catch(() => {});
+    }
+  }, [params]);
+  return null;
+}
+
 function App() {
   return (
     <div className="App min-h-screen bg-terminal-bg text-terminal-text">
       <AuthProvider>
         <BrowserRouter>
+          <ReferralCapture />
           <Toaster theme="dark" position="bottom-right" richColors closeButton />
           <Routes>
             <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
@@ -59,6 +77,9 @@ function App() {
               <Route path="mentor" element={<Mentor />} />
               <Route path="calculator" element={<CalculatorPage />} />
               <Route path="audit" element={<WeeklyAudit />} />
+              <Route path="challenges" element={<Challenges />} />
+              <Route path="pricing" element={<Pricing />} />
+              <Route path="affiliate" element={<Affiliate />} />
             </Route>
           </Routes>
         </BrowserRouter>

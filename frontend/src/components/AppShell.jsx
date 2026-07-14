@@ -11,6 +11,9 @@ import {
   Bot,
   Calculator as CalculatorIcon,
   Flag,
+  Trophy,
+  CreditCard,
+  Users,
   LogOut,
   TerminalSquare,
 } from "lucide-react";
@@ -22,8 +25,11 @@ const nav = [
   { to: "/journal", label: "Journal", icon: Notebook, id: "nav-journal" },
   { to: "/calculator", label: "Risk Calc", icon: CalculatorIcon, id: "nav-calculator" },
   { to: "/audit", label: "Weekly Audit", icon: Flag, id: "nav-audit" },
+  { to: "/challenges", label: "Challenges", icon: Trophy, id: "nav-challenges" },
   { to: "/insights", label: "AI Insights", icon: Sparkles, id: "nav-insights" },
   { to: "/mentor", label: "AI Mentor", icon: Bot, id: "nav-mentor" },
+  { to: "/pricing", label: "Pricing", icon: CreditCard, id: "nav-pricing" },
+  { to: "/affiliate", label: "Affiliate", icon: Users, id: "nav-affiliate" },
 ];
 
 export default function AppShell() {
