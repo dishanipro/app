@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import BotpressChat from "@/components/BotpressChat";
 import {
   LayoutDashboard,
   Table as TableIcon,
@@ -75,6 +76,7 @@ export default function AppShell() {
       <main className="flex-1 min-w-0">
         <Outlet />
       </main>
+      <BotpressChat />
     </div>
   );
 }

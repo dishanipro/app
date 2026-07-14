@@ -10,6 +10,7 @@ import { api, formatApiErrorDetail } from "@/lib/api";
 import { Upload, X } from "lucide-react";
 
 const MARKETS = ["Stocks", "Forex", "Crypto", "Futures", "Options"];
+const RR_OPTIONS = ["1:1", "1:1.5", "1:2", "1:2.5", "1:3", "1:4", "Custom"];
 
 const empty = {
   symbol: "",
@@ -25,7 +26,8 @@ const empty = {
   tags: "",
   notes: "",
   screenshot: "",
-  rating: 0,
+  rr_ratio: "1:2",
+  custom_rr: "",
 };
 
 function toLocalInput(isoStr) {
@@ -42,12 +44,27 @@ export default function TradeForm({ open, onOpenChange, existing, onSaved }) {
 
   useEffect(() => {
     if (existing) {
+      // Parse existing rr_ratio: standard preset or "Custom: X:Y"
+      const raw = existing.rr_ratio || "";
+      let rrDropdown = "1:2";
+      let customRR = "";
+      if (raw.startsWith("Custom:")) {
+        rrDropdown = "Custom";
+        customRR = raw.replace("Custom:", "").trim();
+      } else if (RR_OPTIONS.includes(raw)) {
+        rrDropdown = raw;
+      } else if (raw) {
+        rrDropdown = "Custom";
+        customRR = raw;
+      }
       setF({
         ...empty,
         ...existing,
         tags: (existing.tags || []).join(", "),
         entry_time: toLocalInput(existing.entry_time),
         exit_time: toLocalInput(existing.exit_time),
+        rr_ratio: rrDropdown,
+        custom_rr: customRR,
       });
     } else {
       const now = new Date();
@@ -82,6 +99,9 @@ export default function TradeForm({ open, onOpenChange, existing, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
+      const rrValue = f.rr_ratio === "Custom"
+        ? (f.custom_rr && f.custom_rr.trim() ? `Custom: ${f.custom_rr.trim()}` : "Custom")
+        : f.rr_ratio;
       const payload = {
         ...f,
         symbol: f.symbol.trim().toUpperCase(),
@@ -89,11 +109,12 @@ export default function TradeForm({ open, onOpenChange, existing, onSaved }) {
         exit_price: parseFloat(f.exit_price),
         quantity: parseFloat(f.quantity),
         fees: parseFloat(f.fees) || 0,
-        rating: Number(f.rating) || 0,
+        rr_ratio: rrValue,
         tags: String(f.tags || "").split(",").map((t) => t.trim()).filter(Boolean),
         entry_time: new Date(f.entry_time).toISOString(),
         exit_time: new Date(f.exit_time).toISOString(),
       };
+      delete payload.custom_rr;
       if (existing?.id) {
         await api.put(`/trades/${existing.id}`, payload);
         toast.success("Trade updated.");
@@ -175,10 +196,24 @@ export default function TradeForm({ open, onOpenChange, existing, onSaved }) {
                      className="bg-black rounded-none border-terminal-border font-mono-num mt-1" />
             </div>
             <div>
-              <Label className="text-xs text-terminal-mute uppercase tracking-widest">Rating (0-5)</Label>
-              <Input data-testid="tf-rating" type="number" min={0} max={5} value={f.rating}
-                     onChange={(e) => update("rating", e.target.value)}
-                     className="bg-black rounded-none border-terminal-border font-mono-num mt-1" />
+              <Label className="text-xs text-terminal-mute uppercase tracking-widest">Risk to Reward Ratio</Label>
+              <Select value={f.rr_ratio} onValueChange={(v) => update("rr_ratio", v)}>
+                <SelectTrigger data-testid="tf-rr" className="bg-black rounded-none border-terminal-border font-mono-num mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-terminal-panel rounded-none border-terminal-border">
+                  {RR_OPTIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {f.rr_ratio === "Custom" && (
+                <Input
+                  data-testid="tf-rr-custom"
+                  value={f.custom_rr}
+                  onChange={(e) => update("custom_rr", e.target.value)}
+                  placeholder="e.g. 1:2.75"
+                  className="bg-black rounded-none border-terminal-cyan font-mono-num mt-2 focus-visible:ring-terminal-cyan"
+                />
+              )}
             </div>
             <div>
               <Label className="text-xs text-terminal-mute uppercase tracking-widest">Entry Time</Label>

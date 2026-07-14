@@ -112,7 +112,7 @@ class TradeInput(BaseModel):
     tags: List[str] = []
     notes: Optional[str] = ""
     screenshot: Optional[str] = ""  # base64 data url
-    rating: Optional[int] = 0  # 0-5
+    rr_ratio: Optional[str] = ""  # e.g. "1:2", "1:3", or "Custom: 1:2.75"
 
 class TradeUpdate(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -129,7 +129,7 @@ class TradeUpdate(BaseModel):
     tags: Optional[List[str]] = None
     notes: Optional[str] = None
     screenshot: Optional[str] = None
-    rating: Optional[int] = None
+    rr_ratio: Optional[str] = None
 
 class JournalInput(BaseModel):
     date: str  # YYYY-MM-DD

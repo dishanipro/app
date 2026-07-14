@@ -82,6 +82,7 @@ export default function Trades() {
                 <th className="text-right px-3">Exit</th>
                 <th className="text-right px-3">Fees</th>
                 <th className="text-right px-3">P&L</th>
+                <th className="text-left px-3">R:R</th>
                 <th className="text-left px-3">Strategy</th>
                 <th className="text-center px-3">Chart</th>
                 <th className="text-right px-3">Actions</th>
@@ -100,6 +101,7 @@ export default function Trades() {
                   <td className="text-right px-3">{fmtNum(t.exit_price, 4)}</td>
                   <td className="text-right px-3 text-terminal-mute">{fmtNum(t.fees)}</td>
                   <td className={`text-right px-3 ${pnlClass(t.pnl)}`}>{fmtNum(t.pnl)}</td>
+                  <td className="px-3 text-terminal-cyan">{t.rr_ratio || "—"}</td>
                   <td className="px-3 text-terminal-mute font-sans">{t.strategy || "—"}</td>
                   <td className="text-center px-3">
                     {t.screenshot ? (
@@ -122,7 +124,7 @@ export default function Trades() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={12} className="py-16 text-center text-terminal-dim">No trades match your filters.</td></tr>
+                <tr><td colSpan={13} className="py-16 text-center text-terminal-dim">No trades match your filters.</td></tr>
               )}
             </tbody>
           </table>
