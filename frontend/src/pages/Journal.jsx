@@ -66,7 +66,7 @@ export default function Journal() {
                       className="bg-black rounded-none border-terminal-border" />
           </div>
           <Button data-testid="journal-save" onClick={save} disabled={saving}
-                  className="rounded-none bg-cyan-950 text-terminal-cyan border border-cyan-800 hover:bg-cyan-900 uppercase tracking-widest">
+                  className="rounded-none bg-amber-950/60 text-terminal-cyan border border-amber-500/60 hover:bg-amber-900/60 uppercase tracking-widest">
             <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save entry"}
           </Button>
         </div>

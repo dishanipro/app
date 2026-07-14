@@ -23,8 +23,8 @@ export function PageHeader({ title, subtitle, right }) {
   return (
     <div className="flex items-end justify-between border-b border-terminal-border px-6 py-5">
       <div>
-        <div className="text-[10px] uppercase tracking-widest text-terminal-dim">TAPE.JOURNAL</div>
-        <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight mt-1">{title}</h1>
+        <div className="text-[10px] uppercase tracking-widest text-terminal-dim">TRADEMATE</div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mt-1">{title}</h1>
         {subtitle && <div className="text-sm text-terminal-mute mt-1">{subtitle}</div>}
       </div>
       {right}

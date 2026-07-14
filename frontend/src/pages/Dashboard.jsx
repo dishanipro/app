@@ -37,7 +37,7 @@ export default function Dashboard() {
         subtitle={`${s.total_trades} trades logged · session ${new Date().toLocaleDateString()}`}
         right={
           <Button data-testid="new-trade-btn" onClick={() => setOpenForm(true)}
-                  className="rounded-none bg-cyan-950 text-terminal-cyan border border-cyan-800 hover:bg-cyan-900 uppercase tracking-widest">
+                  className="rounded-none bg-amber-950/60 text-terminal-cyan border border-amber-500/60 hover:bg-amber-900/60 uppercase tracking-widest">
             <Plus className="w-4 h-4 mr-2" /> New Trade
           </Button>
         }

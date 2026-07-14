@@ -15,7 +15,7 @@ const CHALLENGES = [
 ];
 
 const STATUS_STYLE = {
-  active: { label: "IN PROGRESS", color: "text-terminal-cyan", bg: "bg-cyan-950/40", border: "border-terminal-cyan" },
+  active: { label: "IN PROGRESS", color: "text-terminal-cyan", bg: "bg-amber-950/50", border: "border-terminal-cyan" },
   passed: { label: "PASSED", color: "text-terminal-green", bg: "bg-emerald-950/40", border: "border-terminal-green" },
   failed: { label: "FAILED", color: "text-terminal-red", bg: "bg-red-950/40", border: "border-terminal-red" },
 };

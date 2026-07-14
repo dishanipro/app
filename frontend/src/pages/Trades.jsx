@@ -50,7 +50,7 @@ export default function Trades() {
         subtitle={`${filtered.length} of ${rows.length} trades`}
         right={
           <Button data-testid="add-trade" onClick={() => { setEditing(null); setOpenForm(true); }}
-                  className="rounded-none bg-cyan-950 text-terminal-cyan border border-cyan-800 hover:bg-cyan-900 uppercase tracking-widest">
+                  className="rounded-none bg-amber-950/60 text-terminal-cyan border border-amber-500/60 hover:bg-amber-900/60 uppercase tracking-widest">
             <Plus className="w-4 h-4 mr-2" /> New Trade
           </Button>
         }
@@ -106,7 +106,7 @@ export default function Trades() {
                   <td className="text-center px-3">
                     {t.screenshot ? (
                       <button data-testid={`view-chart-${t.id}`} onClick={() => setPreview(t)}
-                              className="text-terminal-cyan hover:text-cyan-300">
+                              className="text-terminal-cyan hover:text-amber-300">
                         <ImageIcon className="w-4 h-4 inline" />
                       </button>
                     ) : <span className="text-terminal-dim">—</span>}

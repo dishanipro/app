@@ -29,8 +29,8 @@ export default function Affiliate() {
     if (!navigator.share) return copy();
     try {
       await navigator.share({
-        title: "TAPE.JOURNAL",
-        text: "The Bloomberg-style trading journal I use. Try it:",
+        title: "TRADEMATE",
+        text: "The trading journal I use — every market, AI mentor built in. Try it:",
         url: referralUrl,
       });
     } catch (e) { /* user dismissed */ }
@@ -65,8 +65,8 @@ export default function Affiliate() {
             <button
               data-testid="aff-copy"
               onClick={copy}
-              className="border border-terminal-cyan bg-cyan-950 text-terminal-cyan px-4 py-2 uppercase tracking-widest text-xs hover:bg-cyan-900 flex items-center gap-2 justify-center"
-              style={{ boxShadow: "0 0 16px rgba(6,182,212,0.4)" }}
+              className="border border-terminal-cyan bg-amber-950/60 text-terminal-cyan px-4 py-2 uppercase tracking-widest text-xs hover:bg-amber-900/60 flex items-center gap-2 justify-center"
+              style={{ boxShadow: "0 0 16px rgba(251,174,60,0.4)" }}
             >
               <Copy className="w-4 h-4" /> {copied ? "Copied!" : "Copy Link"}
             </button>

@@ -15,7 +15,8 @@ module.exports = {
         },
         extend: {
             fontFamily: {
-                sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+                sans: ['"Instrument Sans"', 'system-ui', 'sans-serif'],
+                heading: ['"Bricolage Grotesque"', '"Instrument Sans"', 'system-ui', 'sans-serif'],
                 mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
             },
             colors: {
@@ -53,18 +54,19 @@ module.exports = {
                     foreground: 'hsl(var(--card-foreground))'
                 },
                 terminal: {
-                    bg: '#0A0A0A',
-                    panel: '#111111',
-                    panelHover: '#1A1A1A',
-                    border: '#27272A',
-                    text: '#F4F4F5',
-                    mute: '#A1A1AA',
-                    dim: '#52525B',
-                    orange: '#F97316',
-                    amber: '#F59E0B',
-                    cyan: '#06B6D4',
-                    green: '#10B981',
-                    red: '#EF4444',
+                    bg: '#0B1020',
+                    panel: '#141A2E',
+                    panelHover: '#1D2540',
+                    border: '#2E3654',
+                    text: '#E9EAF7',
+                    mute: '#8A93AE',
+                    dim: '#525B78',
+                    orange: '#FB923C',
+                    amber: '#FBAE3C',
+                    cyan: '#FBAE3C',   /* primary accent — sunset amber (renamed conceptually) */
+                    violet: '#7B8FFF', /* secondary — soft periwinkle */
+                    green: '#4ADE80',
+                    red: '#F87171',
                 }
             },
             borderRadius: {

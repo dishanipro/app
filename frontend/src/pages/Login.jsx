@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { TerminalSquare, LineChart } from "lucide-react";
+import Logo from "@/components/Logo";
+import { LineChart } from "lucide-react";
 
 export default function Login() {
   const { login, register } = useAuth();
@@ -30,17 +31,22 @@ export default function Login() {
       <div className="w-full max-w-5xl grid md:grid-cols-2 border border-terminal-border">
         <div className="hidden md:flex flex-col justify-between p-10 bg-terminal-panel border-r border-terminal-border">
           <div className="flex items-center gap-3">
-            <TerminalSquare className="w-7 h-7 text-terminal-cyan" />
-            <span className="font-mono-num tracking-tighter text-terminal-cyan text-lg">TAPE.JOURNAL</span>
+            <Logo className="w-8 h-8 text-terminal-cyan" />
+            <div className="leading-none">
+              <div className="brand-wordmark text-terminal-text text-xl">TRADEMATE</div>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-terminal-dim mt-1">
+                Your edge, journaled.
+              </div>
+            </div>
           </div>
           <div className="space-y-6">
-            <h1 className="text-4xl font-black uppercase tracking-tight leading-none">
-              Your <span className="text-terminal-cyan">Bloomberg</span>-style<br />
-              trading journal.
+            <h1 className="text-4xl font-black tracking-tight leading-[1.05]">
+              Your <span className="text-terminal-cyan italic font-semibold">edge</span>,<br />
+              journaled.
             </h1>
             <p className="text-terminal-mute max-w-md">
-              Log every trade across stocks, forex, crypto, futures &amp; options.
-              Get instant analytics and Claude-powered performance reviews.
+              A serious trading journal for every market — stocks, forex, crypto, futures &amp; options.
+              Log trades, review psychology, and let AI mentor your process.
             </p>
             <div className="grid grid-cols-3 gap-px bg-terminal-border">
               {[
@@ -110,7 +116,7 @@ export default function Login() {
               data-testid="auth-submit"
               type="submit"
               disabled={submitting}
-              className="w-full rounded-none bg-cyan-950 text-terminal-cyan border border-cyan-800 hover:bg-cyan-900 hover:text-cyan-300 uppercase tracking-widest font-semibold"
+              className="w-full rounded-none bg-amber-950/60 text-terminal-cyan border border-amber-500/60 hover:bg-amber-900/60 hover:text-amber-300 uppercase tracking-widest font-semibold"
             >
               {submitting ? "..." : mode === "login" ? "Access terminal" : "Provision account"}
             </Button>

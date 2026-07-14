@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import BotpressChat from "@/components/BotpressChat";
+import { Wordmark } from "@/components/Logo";
 import {
   LayoutDashboard,
   Table as TableIcon,
@@ -15,7 +16,6 @@ import {
   CreditCard,
   Users,
   LogOut,
-  TerminalSquare,
 } from "lucide-react";
 
 const nav = [
@@ -39,9 +39,8 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-terminal-bg text-terminal-text flex">
       <aside className="w-60 border-r border-terminal-border bg-terminal-panel flex-shrink-0 flex flex-col">
-        <div className="px-5 py-5 border-b border-terminal-border flex items-center gap-2">
-          <TerminalSquare className="w-5 h-5 text-terminal-cyan" />
-          <span className="font-mono-num text-terminal-cyan tracking-tighter">TAPE.JOURNAL</span>
+        <div className="px-5 py-5 border-b border-terminal-border">
+          <Wordmark size="text-base" />
         </div>
         <nav className="flex-1 py-4">
           {nav.map((n) => (

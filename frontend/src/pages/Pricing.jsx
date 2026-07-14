@@ -113,7 +113,7 @@ export default function Pricing() {
               data-testid="subscribe-monthly"
               onClick={() => startCheckout("monthly")}
               disabled={processing || me?.status === "active"}
-              className="mt-8 w-full py-4 uppercase tracking-[0.25em] text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 border border-indigo-400/50 transition-all duration-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="mt-8 w-full py-4 uppercase tracking-[0.25em] text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-400 hover:to-violet-400 border border-indigo-400/50 transition-all duration-100 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ boxShadow: "0 0 24px rgba(99,102,241,0.5)" }}
             >
               Subscribe Monthly

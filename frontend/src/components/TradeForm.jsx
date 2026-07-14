@@ -283,7 +283,7 @@ export default function TradeForm({ open, onOpenChange, existing, onSaved }) {
                 Cancel
               </Button>
               <Button data-testid="tf-submit" type="submit" disabled={saving}
-                      className="rounded-none bg-cyan-950 text-terminal-cyan border border-cyan-800 hover:bg-cyan-900 uppercase tracking-widest">
+                      className="rounded-none bg-amber-950/60 text-terminal-cyan border border-amber-500/60 hover:bg-amber-900/60 uppercase tracking-widest">
                 {saving ? "..." : existing ? "Update" : "Log Trade"}
               </Button>
             </div>

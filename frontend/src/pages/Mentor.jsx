@@ -178,7 +178,7 @@ export default function Mentor() {
           {messages.map((m) => (
             <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                  data-testid={`msg-${m.role}`}>
-              <div className={`max-w-[85%] border ${m.role === "user" ? "border-cyan-800 bg-cyan-950/40" : "border-terminal-border bg-terminal-panel"} px-4 py-3`}>
+              <div className={`max-w-[85%] border ${m.role === "user" ? "border-amber-500/60 bg-amber-950/50" : "border-terminal-border bg-terminal-panel"} px-4 py-3`}>
                 <div className="flex items-center gap-2 mb-1 text-[10px] uppercase tracking-widest text-terminal-dim">
                   {m.role === "user" ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3 text-terminal-cyan" />}
                   <span>{m.role === "user" ? "You" : "TradeMind AI"}</span>
@@ -216,7 +216,7 @@ export default function Mentor() {
             className="bg-black rounded-none border-terminal-border font-sans resize-none"
           />
           <Button data-testid="mentor-send" onClick={() => send()} disabled={sending || !input.trim()}
-                  className="rounded-none bg-cyan-950 text-terminal-cyan border border-cyan-800 hover:bg-cyan-900 uppercase tracking-widest h-16">
+                  className="rounded-none bg-amber-950/60 text-terminal-cyan border border-amber-500/60 hover:bg-amber-900/60 uppercase tracking-widest h-16">
             <Send className="w-4 h-4 mr-2" /> Send
           </Button>
         </div>
