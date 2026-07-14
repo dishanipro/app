@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Notebook,
   Sparkles,
+  Bot,
   LogOut,
   TerminalSquare,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const nav = [
   { to: "/calendar", label: "Calendar", icon: CalendarDays, id: "nav-calendar" },
   { to: "/journal", label: "Journal", icon: Notebook, id: "nav-journal" },
   { to: "/insights", label: "AI Insights", icon: Sparkles, id: "nav-insights" },
+  { to: "/mentor", label: "AI Mentor", icon: Bot, id: "nav-mentor" },
 ];
 
 export default function AppShell() {

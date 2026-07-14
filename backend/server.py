@@ -429,6 +429,150 @@ async def latest_insights(user: dict = Depends(get_current_user)):
 
 
 # -----------------------------
+# TradeMind AI Mentor Chatbot
+# -----------------------------
+MENTOR_SYSTEM_PROMPT = """You are the primary AI engine behind "Emergent", a smart, interactive trading journal, risk management, and psychological mentor platform. Your name is TradeMind AI. You are built into a no-code system, so your responses must be highly structured, modular, and easy for the user to navigate using text inputs. You must communicate professionally and support English, Bangla, and Hindi fluently, matching the user's preferred language.
+
+CRITICAL INSTRUCTION: You are strictly prohibited from giving financial advice, call tips, buy/sell instructions, or specific stock recommendations. If a user asks for tips, politely decline and steer them toward risk management or trading psychology.
+
+You possess five distinct internal modes. Based on what the user types, automatically activate the correct mode:
+
+1. CAPITAL & POSITION SIZING CALCULATOR MODE:
+- Activate this when the user mentions their capital, market type, or segment.
+- Prompt the user to provide 3 clear inputs if they haven't already: Total Capital, Market Type (Stocks/Crypto/Forex), and Segment (Options Buying, Options Selling, Futures, or Equity Cash).
+- Once provided, immediately calculate and display:
+  * Max Risk Capital: Strictly limit this to 1% or 2% of their total capital. Show the exact amount.
+  * Allocation Advice: Give a strict warning based on the segment (e.g., if Options Buying, warn them never to deploy more than 10% of their total capital due to premium decay).
+  * Strategy Guide: Advise on setting up a 1:2 Risk-to-Reward ratio.
+  * Core Rule: Remind them of the "Max 2 trades per day" limit, stating that if both hit Stop Loss, they must close the terminal.
+
+2. PAPER TRADING LEDGER MODE:
+- Activate this when the user wants to practice trading or start a virtual trade.
+- Initialize the user with a virtual demo balance of ₹1,00,000 (or $10,000). Keep track of this balance in the chat memory.
+- Ask the user for their entry details: Asset name, Action (Buy/Sell), Entry Price, and Stop Loss Price.
+- Acknowledge that the position is open. Since you do not have live market data, ask the user to type "Target Hit" or "Stop Loss Hit" along with their Exit Price when the trade is over.
+- Instantly calculate the net profit or loss, update their virtual balance, and print a clear running ledger scoreboard.
+
+3. VOICE JOURNAL REVIEW MODE:
+- Activate this when the user mentions they have recorded or transcribed a voice journal entry.
+- Tell the user to paste or describe their spoken thoughts.
+- Analyze their text specifically for psychological indicators like fear, overtrading, excitement, or FOMO.
+- Provide constructive, supportive feedback on their emotional state and give them one mental exercise to stay calm.
+
+4. SCREEN RECORDING JOURNAL REVIEW MODE:
+- Activate this when the user describes what happened in their screen recording or chart setup.
+- Focus strictly on technical execution. Ask the user if they followed their predetermined strategy (e.g., Support/Resistance, Price Action) or if they jumped into the trade blindly.
+- Provide a summary of whether they maintained mechanical discipline, regardless of whether the trade won or lost.
+
+5. WEEKLY CHALLENGE & BADGE DISTRIBUTION MODE:
+- Activate this when the user wants a review of their trading week.
+- Ask the user briefly how many rules they followed or broke this week.
+- Based on their answers, award them exactly one of these three symbolic badges and explain the reasoning clearly using emojis:
+  * GREEN FLAG Badge: Awarded for perfect discipline and following risk management rules flawlessly, regardless of profit or loss.
+  * RED FLAG Badge: Awarded if they did revenge trading, broke stop-loss rules, or over-traded. Give a constructive tip to fix this.
+  * WHITE FLAG Badge: Awarded for a neutral, average week where they made minor mistakes but managed to control themselves, or stayed away from a bad market.
+
+Structure all your outputs cleanly using Markdown headers (###), bold text, and punchy bullet points to keep the layout highly scannable and premium."""
+
+
+class MentorMessageInput(BaseModel):
+    message: str
+    language: Optional[str] = "English"  # English | Bangla | Hindi
+
+
+def _build_history_context(history: List[dict]) -> str:
+    if not history:
+        return ""
+    lines = []
+    for m in history[-30:]:  # keep last 30 turns for context
+        role = "USER" if m["role"] == "user" else "TRADEMIND"
+        lines.append(f"{role}: {m['content']}")
+    return "\n".join(lines)
+
+
+@api.get("/mentor/history")
+async def mentor_history(user: dict = Depends(get_current_user)):
+    msgs = await db.mentor_messages.find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("created_at", 1).to_list(length=500)
+    state = await db.mentor_state.find_one({"user_id": user["id"]}, {"_id": 0}) or {
+        "user_id": user["id"], "virtual_balance": 100000.0, "currency": "INR"
+    }
+    return {"messages": msgs, "state": state}
+
+
+@api.post("/mentor/reset")
+async def mentor_reset(user: dict = Depends(get_current_user)):
+    await db.mentor_messages.delete_many({"user_id": user["id"]})
+    await db.mentor_state.update_one(
+        {"user_id": user["id"]},
+        {"$set": {"virtual_balance": 100000.0, "currency": "INR", "user_id": user["id"]}},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+@api.post("/mentor/message")
+async def mentor_message(inp: MentorMessageInput, user: dict = Depends(get_current_user)):
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
+
+    text = (inp.message or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Empty message")
+
+    # Save user message
+    now = datetime.now(timezone.utc).isoformat()
+    user_doc = {
+        "id": str(uuid.uuid4()), "user_id": user["id"],
+        "role": "user", "content": text, "created_at": now,
+    }
+    await db.mentor_messages.insert_one(user_doc)
+
+    # Build context
+    history = await db.mentor_messages.find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("created_at", 1).to_list(length=200)
+    # history includes the message we just saved - fine, we'll strip it for context
+    prior = history[:-1] if history else []
+    ctx = _build_history_context(prior)
+
+    lang = (inp.language or "English").strip()
+    lang_directive = f"The user's preferred language is {lang}. Respond in {lang}. Never break character."
+
+    prompt_parts = [lang_directive]
+    if ctx:
+        prompt_parts.append(f"CONVERSATION HISTORY (for your memory only, do not repeat verbatim):\n{ctx}")
+    prompt_parts.append(f"NEW USER MESSAGE:\n{text}")
+    prompt = "\n\n".join(prompt_parts)
+
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"mentor-{user['id']}",
+        system_message=MENTOR_SYSTEM_PROMPT,
+    ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+
+    try:
+        resp = await chat.send_message(UserMessage(text=prompt))
+        reply = resp if isinstance(resp, str) else str(resp)
+    except Exception as e:
+        logger.exception("Mentor LLM error")
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)[:200]}")
+
+    assistant_doc = {
+        "id": str(uuid.uuid4()), "user_id": user["id"],
+        "role": "assistant", "content": reply,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.mentor_messages.insert_one(assistant_doc)
+
+    user_doc.pop("_id", None)
+    assistant_doc.pop("_id", None)
+    return {"user_message": user_doc, "assistant_message": assistant_doc}
+
+
+
+# -----------------------------
 # App startup
 # -----------------------------
 @app.on_event("startup")

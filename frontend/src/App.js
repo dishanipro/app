@@ -11,6 +11,7 @@ import Trades from "@/pages/Trades";
 import CalendarPage from "@/pages/CalendarPage";
 import Journal from "@/pages/Journal";
 import Insights from "@/pages/Insights";
+import Mentor from "@/pages/Mentor";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -53,6 +54,7 @@ function App() {
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="journal" element={<Journal />} />
               <Route path="insights" element={<Insights />} />
+              <Route path="mentor" element={<Mentor />} />
             </Route>
           </Routes>
         </BrowserRouter>
