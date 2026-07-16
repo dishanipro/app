@@ -144,6 +144,31 @@ def calc_pnl(t: dict) -> float:
     return round(diff * t["quantity"] - float(t.get("fees", 0) or 0), 4)
 
 
+def _today_date():
+    return datetime.now(timezone.utc).date()
+
+
+def _iso_date(d):
+    return d.isoformat()
+
+
+async def _has_active_subscription(user_id: str) -> bool:
+    from datetime import date
+    sub = await db.subscriptions.find_one(
+        {"user_id": user_id, "status": "active"},
+        sort=[("activated_at", -1)],
+    )
+    if not sub:
+        return False
+    exp = sub.get("expires_at")
+    if not exp:
+        return True
+    try:
+        return date.fromisoformat(exp) >= _today_date()
+    except Exception:
+        return True
+
+
 # -----------------------------
 # Auth routes
 # -----------------------------
@@ -386,6 +411,8 @@ def _summarize_trades_for_ai(trades: List[dict]) -> str:
 async def ai_insights(user: dict = Depends(get_current_user)):
     if not EMERGENT_LLM_KEY:
         raise HTTPException(status_code=500, detail="LLM key not configured")
+    if not await _has_active_subscription(user["id"]):
+        raise HTTPException(status_code=402, detail="Premium subscription required")
     trades = await db.trades.find({"user_id": user["id"]}, {"_id": 0}).sort("exit_time", -1).to_list(length=200)
     if not trades:
         raise HTTPException(status_code=400, detail="No trades to analyze yet.")
@@ -424,6 +451,8 @@ async def ai_insights(user: dict = Depends(get_current_user)):
 
 @api.get("/ai/insights")
 async def latest_insights(user: dict = Depends(get_current_user)):
+    if not await _has_active_subscription(user["id"]):
+        raise HTTPException(status_code=402, detail="Premium subscription required")
     item = await db.ai_insights.find_one({"user_id": user["id"]}, {"_id": 0}, sort=[("created_at", -1)])
     return item or None
 
@@ -516,6 +545,8 @@ async def mentor_reset(user: dict = Depends(get_current_user)):
 async def mentor_message(inp: MentorMessageInput, user: dict = Depends(get_current_user)):
     if not EMERGENT_LLM_KEY:
         raise HTTPException(status_code=500, detail="LLM key not configured")
+    if not await _has_active_subscription(user["id"]):
+        raise HTTPException(status_code=402, detail="Premium subscription required")
 
     text = (inp.message or "").strip()
     if not text:
@@ -606,14 +637,6 @@ class ChallengeStart(BaseModel):
     custom_days: Optional[int] = None
     custom_target: Optional[float] = None
     custom_title: Optional[str] = ""
-
-
-def _today_date():
-    return datetime.now(timezone.utc).date()
-
-
-def _iso_date(d):
-    return d.isoformat()
 
 
 def _eval_challenge(challenge: dict, trades: List[dict]) -> dict:
@@ -719,6 +742,8 @@ def _eval_challenge(challenge: dict, trades: List[dict]) -> dict:
 
 @api.post("/challenges/start")
 async def start_challenge(inp: ChallengeStart, user: dict = Depends(get_current_user)):
+    if not await _has_active_subscription(user["id"]):
+        raise HTTPException(status_code=402, detail="Premium subscription required")
     from datetime import date, timedelta
     ctype = inp.type
     today = _today_date()
@@ -819,6 +844,8 @@ class CheckoutInput(BaseModel):
 
 class CompletePurchaseInput(BaseModel):
     subscription_id: str
+    txn_id: Optional[str] = ""    # UPI UTR / transaction reference
+    payer_name: Optional[str] = ""
 
 
 async def _ensure_affiliate_code(user_id: str) -> str:
@@ -903,12 +930,18 @@ async def complete_subscription(inp: CompletePurchaseInput, user: dict = Depends
     plan = PLAN_CATALOG.get(sub["plan"])
     today = _today_date()
     expires = today + timedelta(days=plan["days"])
+    txn_id = (inp.txn_id or "").strip()
+    payer = (inp.payer_name or "").strip()
     await db.subscriptions.update_one(
         {"id": sub["id"]},
         {"$set": {
             "status": "active",
             "activated_at": datetime.now(timezone.utc).isoformat(),
             "expires_at": _iso_date(expires),
+            "txn_id": txn_id,
+            "payer_name": payer,
+            "gateway": "upi_manual",
+            "verification": "pending" if txn_id else "unverified",
         }}
     )
 
